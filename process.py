@@ -6,15 +6,15 @@ def construct_trajectories(p_events, p_vitals):
     p_events: events for each patient 
     p_vitals: vital readings for each patient 
     """
-    trajs = {} 
+    trajs = [] 
     
     for patient in p_events: 
         tau = trajs_from_patient(p_events[patient], p_vitals[patient])
         # drop trajectories with length = 0
         if (len(tau) > 1):
-            trajs[int(patient)] = trajs_from_patient(p_events[patient], p_vitals[patient])
+            trajs.append(trajs_from_patient(p_events[patient], p_vitals[patient])) 
 
-    return trajs 
+    return np.array(trajs)  
     
 
 def discretize_S(M, n_clusters=100, random_state=42): 
@@ -83,4 +83,4 @@ if __name__ == "__main__":
 
     p_events, p_vitals = intersect_vitals_events(patient_events, patient_vitals)
     trajectories = construct_trajectories(p_events, p_vitals)
-    save_json(trajectories, "data/process/trajs.json")
+    np.savez(f"data/trajectories", trajectories=trajectories)
