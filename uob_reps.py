@@ -9,32 +9,52 @@ class DelayedUOBREPS:
         self.action_space = action_space
         self.H = horizon
         self.K = episodes
-        self.eta = eta # Learning rate
-        self.gamma = gamma  # Exploration parameter
-        self.delta = delta  # Confidence parameter
-        self.policy = self.initialize_policy()
+
+        # learning rate, exploration parameter, confidence parameter
+        self.eta, self.gamma, self.delta = eta, gamma, delta 
         self.policy, self.q, self.m = self.initialize_policy_and_variables()
-        # Additional initialization as necessary
 
     def initialize_policy_and_variables(self):
         # Initialize policy \pi as a uniform distribution over actions
         # \pi_h^1(a | s) = \frac{1}{A}
-        policy = (1.0 / self.A) * torch.ones(self.S, self.A, self.H, dtype=torch.float32)
+        policy = (1.0 / self.A) * \
+                torch.ones(self.S, self.A, self.H, dtype = torch.float32)
         
         # Next, initialize occupancy measures => 
         # Initialize q as uniform over state-action pairs and next state
         # q_h^1(s, a, s') = \frac{1}{S^2A}
-        q = (1.0 / (self.S * self.S * self.A)) * torch.ones(self.S, self.A, self.S, self.H, dtype=torch.float32)
+        q = (1.0 / (self.S * self.S * self.A)) * \
+            torch.ones(self.S, self.A, self.S, self.H, dtype = torch.float32)
         
         # Initialize m as zeros for all s, a, s', h ------------- m_h^1(s,a) = 0 
         # m_h^1(s, a, s') = 0 for every (s, a, s', h) \in S \times A \times S \times [H].
-        m = torch.zeros(self.S, self.A, self.S, self.H, dtype=torch.float32)
+        m = torch.zeros(self.S, self.A, self.S, self.H, dtype = torch.float32)
         
         return policy, q, m 
    
     def update_confidence_set(self, P_k, trajectory):
-        # Update the confidence set P_{k+1} by algorithm 9 (not provided)
-        pass
+        # Update the confidence set P_{k+1} by algorithm 9 
+        # Extract states (s), actions (a), and rewards (r) from the trajectory
+        # Note: You'll need to adjust this according to how trajectory is represented
+        states, actions, rewards = zip(*trajectory)
+        
+        # Update visit counts m_k
+        for h in range(self.H):
+            s, a = states[h], actions[h]
+            self.m_k[s, a, h] += 1
+        
+        # Update empirical transitions p_k
+        for h in range(self.H-1):
+            s, a, s_prime = states[h], actions[h], states[h+1]
+            self.p_k[s, a, s_prime, h] += 1 / self.m_k[s, a, h]
+
+        # Define confidence sets P_{k+1}
+        # Note: This is a simplified version; the actual implementation should follow the bounds provided in the algorithm
+        P_k_plus_1 = self.p_k.clone()
+        confidence_bounds = torch.sqrt(torch.log(1 / self.delta) / (self.m_k + 1))
+        P_k_plus_1 += confidence_bounds.unsqueeze(2).expand_as(self.p_k)
+        
+        return P_k_plus_1
 
     def compute_upper_occupancy_bound(self, P_k, s, a):
         # Compute the upper occupancy bound u_k(s, a)

@@ -150,7 +150,7 @@ langchain==0.0.209
 langchainplus-sdk==0.0.17
 lazy_loader==0.1
 librosa==0.10.0
-llvmlite==0.39.1
+# llvmlite==0.39.1
 load-dotenv==0.1.0
 locket==1.0.0
 loguru==0.6.0
@@ -178,7 +178,7 @@ netCDF4==1.6.1
 networkx==3.0
 notebook==6.5.2
 notebook_shim==0.2.2
-numba==0.56.4
+# numba==0.56.4
 numexpr==2.8.4
 numpy==1.23.0
 oauth2client==4.1.3
@@ -204,7 +204,7 @@ prometheus-client==0.15.0
 prompt-toolkit==3.0.38
 protobuf==3.19.5
 psutil==5.9.4
-psycopg2==2.9.4
+# psycopg2==2.9.4
 psycopg2-binary==2.9.5
 ptyprocess==0.7.0
 pure-eval==0.2.2
@@ -252,14 +252,14 @@ ruamel.yaml.clib==0.2.7
 s3transfer==0.6.0
 scikit-base==0.5.0
 scikit-learn==1.2.2
-scipy==1.9.1
+# scipy==1.9.1
 scooby==0.7.2
 seaborn==0.12.0
 selenium==4.8.0
 Send2Trash==1.8.0
 shapely==2.0.1
 six==1.16.0
-sklearn==0.0.post2
+# sklearn==0.0.post2
 sktime==0.20.0
 sniffio==1.3.0
 snuggs==1.4.7
@@ -314,4 +314,4 @@ xarray==2022.10.0
 XlsxWriter==3.0.3
 xyzservices==2023.5.0
 yarg==0.1.9
-yarl==1.8.2
+# yarl==1.8.2
