@@ -24,7 +24,7 @@ config = {
             # action space is list of actions, dimensions A * 1
           'action_space':['one', 'two', 'three', 'four', 'five', 'six'],
             # state space is list of states, dimensions S * 1
-          'observation_space': ['one', 'two', 'three', 'four', 'five', 'six'],
+          'state_space': ['one', 'two', 'three', 'four', 'five', 'six'],
             # initial state distribution is a list of probabilities, dimensions S * 1
           'initial_state_distribution': np.array([0.5, 0.5]),
             # transition probabilities are a tensor of probabilities, dimensions S * S * A
@@ -38,7 +38,7 @@ def sample_from_logits(logits):
     sample = pyd.Categorical(logits=logits).sample()
     return sample.item()
 
-class MimicEnv(gym.Env):
+class MDPEnv(gym.Env):
     def __init__(self, config):
         """
         Initialize environment.
@@ -52,7 +52,7 @@ class MimicEnv(gym.Env):
         self.config = config
         self.seed(config["seed"])
         self.action_space = gym.spaces.Discrete(len(config["action_space"]))
-        self.observation_space = gym.spaces.Discrete(len(config["observation_space"]))
+        self.state_space = gym.spaces.Discrete(len(config["state_space"]))
         self.state = sample_from_logits(config["initial_state_distribution"])
         self.transition_function = config["transition_function"]
         self.reward_function = config["reward_function"]
