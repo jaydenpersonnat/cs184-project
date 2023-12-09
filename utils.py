@@ -109,8 +109,9 @@ def construct_M(df, features, rhythms_mapping):
         r = feature_map(row, features, rhythms_mapping)
         M.append(r)
     
-    save_json(M, "data/process/M.json")
-    return np.array(M)
+    M = np.array(M)
+    np.savez("mdp/X_traj", M=M)
+    return M
 
 
 def action_map(I, action_mapping):

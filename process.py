@@ -57,7 +57,7 @@ if __name__ == "__main__":
     n_rhythms = len(unique_rhythms)
     rhythms_mapping = {k:v for k,v in zip(unique_rhythms, range(n_rhythms))}
 
-    features = ["gender", "anchor_age", "temperature", "heartrate", "resprate", "o2sat", "sbp", "dbp", "rhythm"]
+    features = ["temperature", "heartrate", "resprate", "o2sat", "sbp", "dbp", "rhythm"]
 
     M = construct_M(data_pv, features, rhythms_mapping) 
 
@@ -83,4 +83,9 @@ if __name__ == "__main__":
 
     p_events, p_vitals = intersect_vitals_events(patient_events, patient_vitals)
     trajectories = construct_trajectories(p_events, p_vitals)
-    np.savez(f"data/trajectories", trajectories=trajectories)
+    np.savez(f"mdp/trajectories", trajectories=trajectories)
+
+    # in folder called mdp, save state_model, action_space, transition probabilities, M, 
+    # trajectories, discount factor or horizon, and p0 
+    # look up how to save model
+   
