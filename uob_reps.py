@@ -25,6 +25,7 @@ class DelayedUOBREPS:
         self.state_space = self.env.state_space
         self.H = config["training_horizon"]
         self.K = config["episodes"]
+        self.reward_function = self.env.reward_function
         # learning rate, exploration parameter, confidence parameter
         self.eta, self.gamma, self.delta = config["eta"], config["gamma"], config["delta"] 
 
@@ -37,44 +38,24 @@ class DelayedUOBREPS:
         self.S = self.state_space.shape[0]
 
         # initialize policy, occupancy measures, and visit counters
-        self.policy = (1.0 / self.A) * torch.ones(self.S, self.A, self.H, dtype = torch.float32)
-        self.q = (1.0 / (self.S * self.S * self.A)) * torch.ones(self.S, self.A, self.S, self.H, dtype = torch.float32)
-        self.m_sa = torch.zeros(self.S, self.A, self.H, dtype = torch.float32)
-        self.m_sas = torch.zeros(self.S, self.A, self.S, self.H, dtype = torch.float32)
+        self.policy = (1.0 / self.A) * torch.ones(self.S, self.A, self.H)
+        self.q = (1.0 / (self.S * self.S * self.A)) * torch.ones(self.S, self.A, self.S, self.H)
+        self.m_sa = torch.zeros(self.S, self.A, self.H)
+        self.m_sas = torch.zeros(self.S, self.A, self.S, self.H)
 
-        self.P = torch.zeros(self.S, self.A, self.S, self.H, dtype = torch.float32)
+        # keep track of confidence sets
+        self.P = torch.zeros(self.S, self.A, self.S, self.H, self.K, 2.)
 
-        # initialize 
-
-    # def initialize_policy_and_variables(self):
-    #     # Initialize policy \pi as a uniform distribution over actions
-    #     # \pi_h^1(a | s) = \frac{1}{A}
-    #     policy = (1.0 / self.A) * \
-    #              torch.ones(self.S, self.A, self.H, dtype = torch.float32)
-        
-    #     # Next, initialize occupancy measures => 
-    #     # Initialize q as uniform over state-action pairs and next state
-    #     # q_h^1(s, a, s') = \frac{1}{S^2A}
-    #     q = (1.0 / (self.S * self.S * self.A)) * \
-    #         torch.ones(self.S, self.A, self.S, self.H, dtype = torch.float32)
-        
-    #     # Initialize m as zeros for all s, a, s', h ------------- m_h^1(s,a) = 0 
-    #     # m_sa is S * A * H, m_sas is S * A * S' * H
-    #     m_sa = torch.zeros(self.S, self.A, self.H, dtype = torch.float32)
-    #     m_sas = torch.zeros(self.S, self.A, self.S, self.H, dtype = torch.float32)
-        
-    #     return policy, q, m_sa, m_sas
+        # keep track of loss estimator 
+        self.c_hat = torch.zeros(self.S, self.A, self.H)
 
     def update_confidence_set(self, traj):
         # Update the confidence set P_{k+1} by algorithm 9 
         # Extract states (s), actions (a), and rewards (r) from the trajectory
         # Note: You'll need to adjust this according to how trajectory is represented
-        states, actions, rewards = zip(*traj)
-
         p = torch.zeros(self.S, self.A, self.S, self.H, dtype = torch.float32)
 
         for h in range(self.H - 1):
-
             # update visit counters
             s, a, s_prime = traj[h][0], traj[h][1], traj[h+1][0]
             self.m_sa[s, a, h] += 1
@@ -94,59 +75,57 @@ class DelayedUOBREPS:
         # note that p' is in the confidence bound if p - bound <= p' <= p + bound
         return p + bound, p - bound
 
-        # update empirical transitions
-        # for h in range(self.H - 1):
-        #     s, a, s_prime = traj[h][0], traj[h][1], traj[h+1][0]
-        #     self.q[s, a, s_prime, h] += 1 / self.m_sa[s, a, h]
 
-        # # Update visit counts m_k
-        # for h in range(self.H - 1):
-        #     s, a, s_prime = states[h], actions[h], states[h+1] 
-        #     self.m_k[s, a, h] += 1
-        
-        # Update empirical transitions p_k
+    def observe_feedback(self, traj): # objerve \{c^j_h(s^j_h,a^j_h)\}^{H}_{h=1}
+        rewards = torch.zeros(self.H)
         for h in range(self.H - 1):
-            s, a, s_prime = states[h], actions[h], states[h+1]
-            self.p_k[s, a, s_prime, h] += 1 / self.m_k[s, a, h]
+            s, a = traj[h][0], traj[h][1]
+            rewards[h] = self.reward_function(s, a)
 
-        # Define confidence sets P_{k+1}
-        # Note: This is a simplified version; the actual implementation should follow the bounds provided in the algorithm
-        # P_k_plus_1 = self.p_k.clone()
-        # confidence_bounds = torch.sqrt(torch.log(1 / self.delta) / (self.m_k + 1))
-        # P_k_plus_1 += confidence_bounds.unsqueeze(2).expand_as(self.p_k)
-        
-        # return P_k_plus_1
+        return rewards
 
     def compute_upper_occupancy_bound(self, P_k, s, a):
         # Compute the upper occupancy bound u_k(s, a)
         pass
 
+
     def compute_loss_estimator(self, c_h, s, a):
         # Compute the delay-adapted cost estimator c_hat using equation (5)
         pass
+
 
     def update_occupancy_measure(self, q_k, P_k):
         # Update and return the occupancy measure q_{k+1}
         # This will require solving the optimization problem in Eq. (31), which involves KL divergence
         pass
 
+
     def update_policy(self, q_k_plus_1):
         # Update the policy based on the new occupancy measure q_{k+1}
         pass
 
     def run(self):
-        for k in range(1, self.K + 1):
-            trajectory = self.play_episode(self.policy)
-            self.P = self.update_confidence_set(trajectory)
+        delayed = []
 
+        for k in range(1, self.K + 1):
+            # Play episode k with policy $\pi_k$ and observe trajectory
+            trajectory = self.play_episode(self.policy)
+
+            # update confidence set P_{k+1}j by algorithm 9
+            upper_p, lower_p = self.update_confidence_set(trajectory)
+            self.P[:, :, :, :, k, 0], self.P[:, :, :, :, k, 1] = upper_p, lower_p
             
-            
-            for h in range(1, self.H + 1):
-                u_k = self.compute_upper_occupancy_bound(P_k, s, a)
-                c_hat = self.compute_loss_estimator(c_h, s, a)
+            for j in delayed: #! HOW ARE WE TRACKING THE DELAYED TRAJECTORIES? 
+                self.observe_feedback(trajectory)
+                # 
+                self.compute_upper_occupancy_bound(k) 
+
+            # for h in range(1, self.H + 1):
+            #     u_k = self.compute_upper_occupancy_bound(P_k, s, a)
+            #     c_hat = self.compute_loss_estimator(c_h, s, a)
                 
-                q_k_plus_1 = self.update_occupancy_measure(q_k, P_k_plus_1)
-                self.update_policy(q_k_plus_1)
+            #     q_k_plus_1 = self.update_occupancy_measure(q_k, P_k_plus_1)
+            #     self.update_policy(q_k_plus_1)
         return self.policy
     
     def play_one_step(self, policy):
@@ -163,17 +142,3 @@ class DelayedUOBREPS:
             self.state = next_state
             self.h += 1
         return trajectory
-
-
-# Example usage
-state_space_size = 10  # replace with actual size of state space
-action_space_size = 5  # replace with actual size of action space
-horizon = 20  # replace with actual horizon
-episodes = 100  # replace with the desired number of episodes
-eta = 0.01  # replace with the desired learning rate
-gamma = 0.99  # replace with the desired exploration parameter
-delta = 0.1  # replace with the desired confidence parameter
-
-algorithm = DelayedUOBREPS(state_space_size, action_space_size, 
-                           horizon, episodes, eta, gamma, delta)
-print(algorithm.initialize_policy_and_variables())
