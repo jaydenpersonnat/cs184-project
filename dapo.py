@@ -7,24 +7,29 @@ import numpy as np
 # MimicEnv = env_setup.MDPEnv(env_setup.config_env)
 
 # write a 6x6 tensor with half zeros and half ones randomly
+mdp_params = np.load("")
+
+reward = mdp_params['reward']
+mu = mdp_params['mu']
+p_transition = mdp_params['p_transition']
+states = mdp_params['states']
+actions = mdp_params['n_actions']
 
 
-thing = torch.zeros((6, 6))
-thing[2][4] = 1
 config = {
         # this is for both the environment and the agent
         # action space is list of actions, dimensions A * 1
-        'action_dim':6,
+        'action_dim': actions,
         # state space is list of states, dimensions S * 1
-        'state_dim': 100,
+        'state_dim': states,
         # transition probabilities are a tensor of probabilities, dimensions S * S * A
         # 'transition_function': torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
-        'transition_function': torch.ones((6, 6, 6)),
+        'transition_function': torch.from_numpy(p_transition),
 
         # initial state distribution is logits
-        'initial_state_distribution': torch.tensor([0.5, 0.5]),
+        'initial_state_distribution': torch.from_numpy(mu),
         # reward function is S * A
-        'reward_function': thing,
+        'reward_function': torch.from_numpy(reward),
 
         'training horizon H': 100,
         'episodes K': 1000,
