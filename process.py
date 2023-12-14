@@ -86,6 +86,4 @@ if __name__ == "__main__":
     np.savez(f"mdp/trajectories", trajectories=trajectories)
 
     # in folder called mdp, save state_model, action_space, transition probabilities, M, 
-    # trajectories, discount factor or horizon, and p0 
-    # look up how to save model
-   
+    # trajectories, discount factor or horizon, and p0    
