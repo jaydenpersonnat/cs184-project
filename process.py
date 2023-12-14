@@ -2,7 +2,9 @@ from sklearn.cluster import KMeans
 from utils import * 
 from maxent import irl, irl_causal, feature_expectation_from_trajectories
 import optimizer as O 
-import solver as S                          # MDP solver (value-iteration)
+import solver as S                  
+from sklearn.preprocessing import OneHotEncoder
+        # MDP solver (value-iteration)
 
 
 def construct_trajectories(p_events, p_vitals): 
@@ -10,15 +12,15 @@ def construct_trajectories(p_events, p_vitals):
     p_events: events for each patient 
     p_vitals: vital readings for each patient 
     """
-    trajs = [] 
+    trajs = {} 
     
     for patient in p_events: 
         tau = trajs_from_patient(p_events[patient], p_vitals[patient])
         # drop trajectories with length = 0
         if (len(tau) > 1):
-            trajs.append(trajs_from_patient(p_events[patient], p_vitals[patient])) 
+            trajs[int(patient)] = trajs_from_patient(p_events[patient], p_vitals[patient])
 
-    return np.array(trajs)  
+    return trajs 
 
 
 def calc_start_dist(taus, S): 
@@ -66,7 +68,7 @@ def convert_traj(trajectories):
 
 
 
-def train_single_intent(T, p_transition, terminal_states, discount=0.9): 
+def train_single_intent(T, p_transition, states, terminal_states, discount=0.9): 
     # set up features: we use one feature vector per state (1 hot encoding for each cluster/state)
     # choose our parameter initialization strategy:
     #   initialize parameters with constant
@@ -75,6 +77,9 @@ def train_single_intent(T, p_transition, terminal_states, discount=0.9):
         # choose our optimization strategy:
         #   we select exponentiated stochastic gradient descent with linear learning-rate decay
         optim = O.ExpSga(lr=O.linear_decay(lr0=0.2))
+
+        state_encoder = OneHotEncoder(sparse=False, categories= [np.arange(states)])
+        features = state_encoder.fit_transform(np.arange(states).reshape(-1, 1))
 
         # actually do some inverse reinforcement learning
         # reward_maxent = maxent_irl(p_transition, features, terminal_states, trajectories, optim, init, eps= 1e-3)
@@ -153,16 +158,18 @@ if __name__ == "__main__":
 
     p_events, p_vitals = intersect_vitals_events(patient_events, patient_vitals)
     trajectories = construct_trajectories(p_events, p_vitals)
+
+    save_json(trajectories, f"data/trajectories_{states}")
+
     T = convert_traj(trajectories)
 
     p_transition = calc_tran_model(T, states, n_actions)
     terminal_states = calc_terminal_states(trajectories)
 
-    reward, _ = train_single_intent(T, p_transition, terminal_states)
+    reward, _ = train_single_intent(T, p_transition, states, terminal_states)
 
     reward = np.tile(reward.reshape(-1, 1), n_actions)
 
     mu = calc_start_dist(list(trajectories.values()), states)
 
-    np.savez(f"mdp/mdp_{states}", states=states, n_actions=n_actions, actions=actions, p_transition=p_transition, reward=reward, terminal_states=terminal_states, mu=mu)
-
+    np.savez(f"mdp/mdp_{states}", states=states, n_actions=n_actions, p_transition=p_transition, reward=reward, terminal_states=terminal_states, mu=mu)

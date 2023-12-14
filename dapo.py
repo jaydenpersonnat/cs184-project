@@ -19,9 +19,9 @@ actions = mdp_params['n_actions']
 config = {
         # this is for both the environment and the agent
         # action space is list of actions, dimensions A * 1
-        'action_dim': actions,
+        'action_dim': int(actions),
         # state space is list of states, dimensions S * 1
-        'state_dim': states,
+        'state_dim': int(states),
         # transition probabilities are a tensor of probabilities, dimensions S * S * A
         # 'transition_function': torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
         'transition_function': torch.from_numpy(p_transition),
