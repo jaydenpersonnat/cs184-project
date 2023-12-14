@@ -171,29 +171,21 @@ class DAPO:
                 for s in range(self.S): 
                     for a in range(self.A): 
 
-                        numerator = self.policy_history[s][a][h][k]
-
                         summation = 0.
                         for j in len(delayed): 
-                            advantage = Q[s][a][h][j] - B[s][a][h][j]
-                            summation += advantage
+                            summation += Q[s][a][h][j] - B[s][a][h][j]
 
-                        numerator *= np.exp(-1 * self.eta * summation)
+                        numerator = self.policy_history[s][a][h][k] * np.exp(-1 * self.eta * summation)
                         
-                        # numerator = self.policy_history[s][a][h][k] * np.exp(-1 * self.eta * summation)
-
-                        denominator = 1.
-                        for i in range(self.A):
-                            # k_policy = self.policy_history[:, :, h, k]
-                            denom_sum = self.policy_history[:, :, h, k][s][i]
-
+                        denominator = 0.
+                        
+                        for a_prime in range(self.A):
                             inner_sum = 0.
                             for d in len(delayed): 
-                                advantage = Q[s][a][h][d] - B[s][a][h][d]
-                                inner_sum += advantage
+                                inner_sum += Q[s][a_prime][h][d] - B[s][a_prime][h][d]
 
-                            denom_sum *= np.exp(-1 * self.eta * inner_sum)
-                            denominator += denom_sum
+                            denom_sum = np.exp(-1 * self.eta * inner_sum)
+                            denominator += self.policy_history[s, a_prime, h, k] * denom_sum
 
-                        self.policy_history[s][a][h][k + 1] = numerator / denominator
+                        self.policy_history[s][a][h][k + 1] = numerator / (denominator if denominator != 0 else 1)
             
