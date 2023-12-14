@@ -107,6 +107,9 @@ class DAPO:
 
     def run(self):
         for k in range(self.K):
+            # DELAYS!
+            self.delay_dict[np.random(np.arange(k, self.K))].append(k)
+
             delayed = self.delay_dict[k]
             # Play episode k with policy $\pi_k$ and observe trajectory
             # trajectory = self.play_episode(self.current_policy_history[:,:,:,k])
@@ -189,3 +192,7 @@ class DAPO:
 
                         self.policy_history[s][a][h][k + 1] = numerator / (denominator if denominator != 0 else 1)
             
+            #! AT END PUT THINGS IN DICTIONARY (SOME DELAY FUNCTIONALITY)
+            # PUT k IN DELAYED DICTIONARY AT SOME VALUE > k  
+            
+            # self.delay_dict[k] = k + 1
