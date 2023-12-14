@@ -159,7 +159,7 @@ if __name__ == "__main__":
     p_events, p_vitals = intersect_vitals_events(patient_events, patient_vitals)
     trajectories = construct_trajectories(p_events, p_vitals)
 
-    save_json(trajectories, f"data/trajectories_{states}")
+    save_json(trajectories, f"data/trajectories_{states}.json")
 
     T = convert_traj(trajectories)
 
@@ -167,6 +167,8 @@ if __name__ == "__main__":
     terminal_states = calc_terminal_states(trajectories)
 
     reward, _ = train_single_intent(T, p_transition, states, terminal_states)
+
+    print("--Trained inverse RL model--")
 
     reward = np.tile(reward.reshape(-1, 1), n_actions)
 

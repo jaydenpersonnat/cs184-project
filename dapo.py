@@ -7,7 +7,7 @@ import numpy as np
 # MimicEnv = env_setup.MDPEnv(env_setup.config_env)
 
 # write a 6x6 tensor with half zeros and half ones randomly
-mdp_params = np.load("")
+mdp_params = np.load("mdp/mdp_25.npz")
 
 reward = mdp_params['reward']
 mu = mdp_params['mu']
@@ -42,8 +42,8 @@ class DAPO:
     def __init__(self, config): 
         # Initialize the environment
         # self.env = env
-        self.action_space = config['action_space']
-        self.state_space = config['state_space']
+        # self.action_space = config['action_space']
+        # self.state_space = config['state_space']
         self.transition_function = config['transition_function']
         self.initial_state_distribution = config['initial_state_distribution']
         self.H = config["training horizon H"]
@@ -59,7 +59,7 @@ class DAPO:
 
         # initialize space dimensions
         self.A = config['action_dim'] # self.action_space.shape[0]
-        self.S = 6 # self.state_space.shape[0]
+        self.S = config['state_dim'] # self.state_space.shape[0]
 
         # initialize policy, occupancy measures, and visit counters
         # self.policy_history = torch.zeros(self.S, self.A, self.H, self.K)
