@@ -17,7 +17,7 @@ config_agent = {
 
 MimicEnv = env_setup.MDPEnv(env_setup.config_env)
 
-class DAPO:        
+class DAPO:
     def __init__(self, config, env): 
         # Initialize the environment
         self.env = env
@@ -33,8 +33,6 @@ class DAPO:
         self.gamma = config_agent["gamma"]
 
         # initialize state and time step
-        self.h = 0
-        self.k = 0
         self.state = self.env.state
 
         # initialize space dimensions
@@ -42,10 +40,11 @@ class DAPO:
         self.S = self.state_space.shape[0]
 
         # initialize policy, occupancy measures, and visit counters
-        self.policy_history = torch.zeros(self.S, self.A, self.H, self.K)
+        # self.policy_history = torch.zeros(self.S, self.A, self.H, self.K)
         self.policy_history = (1.0 / self.A) * torch.ones(self.S, self.A, self.H, self.K)
-#         self.policy_history[:, :, :, self.K]
 
+        self.delay_dict = {}
+        for i in range(self.K): self.delay_dict[i] = []
 
     def play_one_step(self, policy):
         # Play one step in the environment and return the next state, reward, and done flag
@@ -108,39 +107,60 @@ class DAPO:
         return occ_measure
 
     def run(self):
-        delayed = []
-
         for k in range(self.K):
+            delayed = self.delay_dict[k]
             # Play episode k with policy $\pi_k$ and observe trajectory
             # trajectory = self.play_episode(self.current_policy_history[:,:,:,k])
             
-            B = torch.zeros(self.S, self.A, len(delayed))
-            Q = torch.zeros(self.S, self.A, len(delayed))
+            B = torch.zeros(self.S, self.A, self.H, len(delayed))
+            Q = torch.zeros(self.S, self.A, self.H, len(delayed))
 
-            for j in delayed: #! HOW ARE WE TRACKING THE DELAYED TRAJECTORIES? 
+            numerator_sum = 0
+
+            #! HOW ARE WE TRACKING THE DELAYED TRAJECTORIES? 
+            #! A DICTIONARY 
+            for j in delayed: 
                 #? lol idk 
                 # get trajectory corresponding to delayed trajectory
                 trajectory = self.play_episode(self.policy_history[:,:,:,j])
                 rewards = self.observe_feedback(trajectory)
 
-                for h in range(self.self.H): 
+                for h in range(self.H, 0): 
                     j_policy = self.policy_history[:, :, h, j]
                     k_policy = self.policy_history[:, :, h, k]
 
-                    r = j_policy / torch.max(j_policy, k_policy)
+                    r = j_policy / torch.max(j_policy, k_policy) # s by a matrix for time step h
                     L = np.sum(rewards[h:])
             
                     # replace [s][a] entry of Q
                     sh, ah = trajectory[h][0], trajectory[h][1]
-                    Q[sh][ah][j] = r[sh, ah] * L / \
+                    Q[sh][ah][h][j] = r[sh, ah] * L / \
                             (self.get_occupancy(h, k)[sh] * j_policy[sh][ah] + self.gamma)
 
-                    b = (3 * self.gamma * self.H) * torch.sum(k_policy[sh]) * torch.sum(r[sh]) / \
-                            (self.get_occupancy(h, k)[sh] * torch.sum(j_policy[sh]) + self.gamma)
-        
-                    # replace [s][a] entry of B
-                    for s, a in range(self.S, self.A):
-                        # self.transition[sh][a] * 
-                        j_policy[s][a] * B[sh][ah][j]
+                    for s in range(self.S):
+                        b = (3 * self.gamma * self.H) * torch.sum(k_policy[s]) * torch.sum(r[s]) / \
+                            (self.get_occupancy(h, k)[s] * torch.sum(j_policy[s]) + self.gamma)
 
-                    r = self.policy_history[self.S, self.A, h, k] / np.max()
+                        for a in range(self.A):
+                            
+                            summation = 0
+                            for s_prime in range(self.S):
+                                for a_prime in range(self.A):
+                                    
+                                    term = self.transition[s][a][s_prime] \
+                                        * self.policy_history[s_prime, a_prime, h+1, j][s_prime][a_prime] \
+                                        * B[s_prime][a_prime][h+1][j]
+                                    summation += term 
+
+                        B[s][a][h][j] = b + summation
+
+                numerator_sum += Q[:, :, :, j] - B[:, :, :, j]
+
+            #! POLICY IMPROVEMENT NEEDS TO BE FINISHED
+            numerator = self.policy_history[:,:,:,k] * torch.exp(-1 * self.eta * numerator_sum)
+            denominator = 1.
+
+            self.policy_history[:,:,:,k+1] = numerator / denominator
+
+            #! AT END PUT THINGS IN DICTIONARY (SOME DELAY FUNCTIONALITY)
+            # PUT k IN DELAYED DICTIONARY AT SOME VALUE > k 
