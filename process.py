@@ -1,5 +1,9 @@
 from sklearn.cluster import KMeans
 from utils import * 
+from maxent import irl, irl_causal, feature_expectation_from_trajectories
+import optimizer as O 
+import solver as S                          # MDP solver (value-iteration)
+
 
 def construct_trajectories(p_events, p_vitals): 
     """
@@ -15,7 +19,73 @@ def construct_trajectories(p_events, p_vitals):
             trajs.append(trajs_from_patient(p_events[patient], p_vitals[patient])) 
 
     return np.array(trajs)  
+
+
+def calc_start_dist(taus, S): 
+    X = np.zeros(S)
+    n = len(taus)
+
+    for tau in taus: 
+        X[tau[0]] += 1 
+
+    return X / n 
+
+
+def calc_tran_model(taus, states, actions, smoothing_value=1): 
+    p_transition = np.zeros((states, states, actions)) + smoothing_value
+
+    for traj in taus:
+        for tran in traj:
+
+            p_transition[tran[0], tran[2], tran[1]] +=1
+
+        p_transition = p_transition/ p_transition.sum(axis = 1)[:, np.newaxis, :]
+
+    return p_transition
+
+def calc_terminal_states(taus): 
+    terminal_states = set() 
+
+    for patient in taus: 
+        terminal_states.add(taus[patient][-1])
     
+    return list(terminal_states)
+
+def convert_traj(trajectories):
+    lst = []
+    for patient in trajectories:
+        traj = trajectories[patient]
+        row = []
+        n = len(traj)
+        for i in range(0, n-2, 2):
+            row.append((traj[i], traj[i+1], traj[i+2]))
+        
+        lst.append(row)
+    
+    return lst
+
+
+
+def train_single_intent(T, p_transition, terminal_states, discount=0.9): 
+    # set up features: we use one feature vector per state (1 hot encoding for each cluster/state)
+    # choose our parameter initialization strategy:
+    #   initialize parameters with constant
+        init = O.Constant(1.0)
+
+        # choose our optimization strategy:
+        #   we select exponentiated stochastic gradient descent with linear learning-rate decay
+        optim = O.ExpSga(lr=O.linear_decay(lr0=0.2))
+
+        # actually do some inverse reinforcement learning
+        # reward_maxent = maxent_irl(p_transition, features, terminal_states, trajectories, optim, init, eps= 1e-3)
+
+        reward_maxent_causal, theta_causal = irl_causal(p_transition, features, terminal_states, T, optim, init, discount,
+                    eps=1e-3, eps_svf=1e-4, eps_lap=1e-4)
+        
+        
+        return reward_maxent_causal, theta_causal
+
+
 
 def discretize_S(M, n_clusters=100, random_state=42): 
     """
@@ -70,8 +140,8 @@ if __name__ == "__main__":
 
     inputevents_sample = inputevents_df.sample(n=6000000, random_state = 42)
 
-    n_actions = len(inputevents_df['ordercategorydescription'].unique())
-    actions = inputevents_df['ordercategorydescription'].unique() 
+    n_actions = len(inputevents_df['ordercategorydescription'].unique()) + 1 
+    actions = ["No Treatment"] + list(inputevents_df['ordercategorydescription'].unique())
     action_mapping = {k:v for k, v in zip(actions, range(n_actions))}
 
     patient_data = {} 
@@ -83,9 +153,16 @@ if __name__ == "__main__":
 
     p_events, p_vitals = intersect_vitals_events(patient_events, patient_vitals)
     trajectories = construct_trajectories(p_events, p_vitals)
-    np.savez(f"mdp/trajectories", trajectories=trajectories)
+    T = convert_traj(trajectories)
 
-    # in folder called mdp, save state_model, action_space, transition probabilities, M, 
-    # trajectories, discount factor or horizon, and p0 
-    # look up how to save model
-   
+    p_transition = calc_tran_model(T, states, actions)
+    terminal_states = calc_terminal_states(trajectories)
+
+    reward, _ = train_single_intent(T, p_transition, terminal_states)
+
+    reward = np.tile(reward.reshape(-1, 1), n_actions)
+
+    mu = calc_start_dist(list(trajectories.values()), states)
+
+    np.savez(f"mdp/mdp_{states}", states=states, n_actions=n_actions, actions=actions, p_transition=p_transition, reward=reward, terminal_states=terminal_states, mu=mu)
+
