@@ -6,6 +6,11 @@ import numpy as np
 
 # MimicEnv = env_setup.MDPEnv(env_setup.config_env)
 
+# write a 6x6 tensor with half zeros and half ones randomly
+
+
+thing = torch.zeros((6, 6))
+thing[2][4] = 1
 config = {
         # this is for both the environment and the agent
         # action space is list of actions, dimensions A * 1
@@ -19,10 +24,10 @@ config = {
         # initial state distribution is logits
         'initial_state_distribution': torch.tensor([0.5, 0.5]),
         # reward function is S * A
-        'reward_function': torch.ones((6, 6)),
+        'reward_function': thing,
 
-        'training horizon H': 5,
-        'episodes K': 100,
+        'training horizon H': 100,
+        'episodes K': 1000,
         'eta': 0.01,
         'gamma': 0.1        
 }
