@@ -14,9 +14,9 @@ thing[2][4] = 1
 config = {
         # this is for both the environment and the agent
         # action space is list of actions, dimensions A * 1
-        'action_space':['one', 'two', 'three', 'four', 'five', 'six'],
+        'action_dim':6,
         # state space is list of states, dimensions S * 1
-        'state_space': ['one', 'two', 'three', 'four', 'five', 'six'],
+        'state_dim': 100,
         # transition probabilities are a tensor of probabilities, dimensions S * S * A
         # 'transition_function': torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
         'transition_function': torch.ones((6, 6, 6)),
@@ -53,7 +53,7 @@ class DAPO:
         # self.state = sample_from_logits(self.initial_state_distribution)
 
         # initialize space dimensions
-        self.A = 6 # self.action_space.shape[0]
+        self.A = config['action_dim'] # self.action_space.shape[0]
         self.S = 6 # self.state_space.shape[0]
 
         # initialize policy, occupancy measures, and visit counters

@@ -155,7 +155,7 @@ if __name__ == "__main__":
     trajectories = construct_trajectories(p_events, p_vitals)
     T = convert_traj(trajectories)
 
-    p_transition = calc_tran_model(T, states, actions)
+    p_transition = calc_tran_model(T, states, n_actions)
     terminal_states = calc_terminal_states(trajectories)
 
     reward, _ = train_single_intent(T, p_transition, terminal_states)
