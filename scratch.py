@@ -16,3 +16,5 @@ import numpy as np
 P = torch.zeros(3, 3, 3, 3, 5, 2)
 thing = torch.ones(3, 3, 3, 3)
 P[:, :, :, :, 0, 0] = thing
+
+print(np.max(P, thing))
