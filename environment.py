@@ -53,6 +53,7 @@ class MDPEnv(gym.Env):
         self.seed(config["seed"])
         self.action_space = gym.spaces.Discrete(len(config["action_space"]))
         self.state_space = gym.spaces.Discrete(len(config["state_space"]))
+        self.initial_state_distribution = config["initial_state_distribution"]
         self.state = sample_from_logits(config["initial_state_distribution"])
         self.transition_function = config["transition_function"]
         self.reward_function = config["reward_function"]
