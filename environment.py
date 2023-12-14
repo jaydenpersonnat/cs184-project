@@ -30,7 +30,8 @@ config = {
             # transition probabilities are a tensor of probabilities, dimensions S * S * A
           'transition_function': torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
             # reward function is a function S * A -> R
-          'reward_function': reward}
+          'reward_function': reward
+}
 
 
 def sample_from_logits(logits):
