@@ -11,6 +11,9 @@ from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
+import seaborn as sns 
+import matplotlib.pyplot as plt 
+import pandas as pd 
 
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 
@@ -307,6 +310,22 @@ class PPO(OnPolicyAlgorithm):
         # self.logger.record("train/clip_range", clip_range)
         # if self.clip_range_vf is not None:
         #     self.logger.record("train/clip_range_vf", clip_range_vf)
+            
+        losses = np.array(losses)
+
+        data = pd.DataFrame({
+        'Updates': np.arange(len(losses)),
+        'Loss': losses})
+        
+        sns.lineplot(x='Updates', y='Loss', data=data)
+
+        # Optional: Set the labels and title using Matplotlib functions
+        plt.xlabel('Updates')              # Label for x-axis
+        plt.ylabel('Loss')       # Label for y-axis
+        plt.title('') # Title of the plot
+
+        plt.show()   
+
 
     def learn(
         self: SelfPPO,
@@ -332,5 +351,5 @@ from stable_baselines3.common.monitor import Monitor
 
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=False)
-model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", n_epochs=1000, batch_size = 32)
+model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", n_epochs=10, batch_size = 32)
 model.learn(total_timesteps=1)

@@ -686,7 +686,7 @@ class PPO(OnPolicyAlgorithm):
         losses = np.array(losses)
 
         data = pd.DataFrame({
-        'Epochs': np.arange(len(losses)),
+        'Updates': np.arange(len(losses)),
         'Loss': losses
     })
         
