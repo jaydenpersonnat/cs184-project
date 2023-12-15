@@ -674,29 +674,13 @@ class PPO(OnPolicyAlgorithm):
         losses = np.array(losses)
 
 
-        actions = [[int(action) for action in rollout.actions.numpy()] for rollout in all_rolloutbuffers_sofar]
-        observations = [[int(observation) for observation in rollout.observations.numpy()] for rollout in all_rolloutbuffers_sofar]
+        actions = [[int(action[0]) for action in rollout.actions.numpy()] for rollout in all_rolloutbuffers_sofar]
+        observations = [[int(observation[0]) for observation in rollout.observations.numpy()] for rollout in all_rolloutbuffers_sofar]
 
         
-        np.savez(f"data/dppo_losses_{self.n_epochs}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
+        np.savez(f"data/trials/losses/dppo_losses_{self.n_epochs}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
 
-        utils.save_json([observations, actions], f"data/dppo_run_rollouts_{self.n_epochs}.json")
-
-
-    #     data = pd.DataFrame({
-    #     'Updates': np.arange(len(losses)),
-    #     'Loss': losses
-    # })
-        
-    #     sns.lineplot(x='Updates', y='Loss', data=data)
-
-    #     # Optional: Set the labels and title using Matplotlib functions
-    #     plt.xlabel('Updates')              # Label for x-axis
-    #     plt.ylabel('Loss')       # Label for y-axis
-    #     plt.title('Delayed PPO losses') # Title of the plot
-
-    #     plt.savefig(f"data/ppo_losses_{self.n_epochs}_figure")
-    #     plt.show()   
+        utils.save_json([observations, actions], f"data/trials/rollouts/dppo_run_rollouts_{self.n_epochs}.json")
 
 
 
