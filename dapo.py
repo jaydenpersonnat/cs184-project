@@ -14,6 +14,12 @@ mu = mdp_params['mu']
 p_transition = mdp_params['p_transition']
 states = mdp_params['states']
 actions = mdp_params['n_actions']
+H = 1000
+K = 10000
+D = 50
+
+eta = (H^2 * int(states) * int(actions) * K + H^4 * (K + D)) ** (-(1/2))
+print('eta', eta)
 
 
 config = {
@@ -31,10 +37,10 @@ config = {
         # reward function is S * A
         'reward_function': torch.from_numpy(reward),
 
-        'training horizon H': 100,
-        'episodes K': 1000,
-        'eta': 0.01,
-        'gamma': 0.1        
+        'training horizon H': H,
+        'episodes K': K,
+        'eta': eta,
+        'gamma': 2 * eta * H     
 }
 
 
@@ -78,7 +84,6 @@ class DAPO:
         # Play one step in the environment and return the next state, reward, and done flag
         # print('policy at k', policy)
         # print('action distribution at k', policy[current_state, :, h])
-
 
         action = self.sample_from_logits(policy[current_state, :, h])
         next_state = self.sample_from_logits(self.transition_function[current_state][action])
@@ -144,7 +149,7 @@ class DAPO:
             # DELAYS! #! HOW ARE WE TRACKING THE DELAYED TRAJECTORIES? 
             # put k in list in dictionary at some value >= k, < K
             #! RANDOMMMMMMMMMM
-            rdm_num = np.random.choice(np.arange(k, self.K))
+            rdm_num = np.random.choice(np.arange(k, k+1))
             self.delay_dict[rdm_num].append(k)
             delayed = self.delay_dict[k]
 
