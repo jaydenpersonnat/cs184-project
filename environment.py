@@ -6,14 +6,17 @@ from gymnasium.utils import seeding
 from torch import distributions as pyd
 import torch
 
-# state space tensor
-# action space tensor
-# reward function
-# transition function (transition probability array)
-# initial state distribution
 
-def reward (state, action):
-    pass
+mdp_params = np.load("mdp/mdp_25.npz")
+
+reward = mdp_params['reward']
+mu = mdp_params['mu']
+p_transition = mdp_params['p_transition']
+states = mdp_params['states']
+actions = mdp_params['n_actions']
+H = 1000
+K = 10000
+D = 50
 
 # def transition (state, action, next_state):
 #     transition_probs = np.array([[0.5, 0.5], [0.5, 0.5]])
@@ -21,18 +24,21 @@ def reward (state, action):
 #     pass
 
 config = {
-            # action space is list of actions, dimensions A * 1
-          'action_space':['one', 'two', 'three', 'four', 'five', 'six'],
-            # state space is list of states, dimensions S * 1
-          'state_space': ['one', 'two', 'three', 'four', 'five', 'six'],
-            # initial state distribution is a list of probabilities, dimensions S * 1
-          'initial_state_distribution': np.array([0.5, 0.5]),
-            # transition probabilities are a tensor of probabilities, dimensions S * S * A
-          'transition_function': torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
-            # reward function is a function S * A -> R
-          'reward_function': reward
+        # this is for both the environment and the agent
+        # action space is list of actions, dimensions A * 1
+        'action_dim': int(actions),
+        # state space is list of states, dimensions S * 1
+        'state_dim': int(states),
+        # transition probabilities are a tensor of probabilities, dimensions S * S * A
+        # 'transition_function': torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
+        'transition_function': torch.from_numpy(p_transition),
+        # initial state distribution is logits
+        'initial_state_distribution': torch.from_numpy(mu),
+        # reward function is S * A
+        'reward_function': torch.from_numpy(reward),
+        'seed': 0,
+        'training horizon H': H
 }
-
 
 def sample_from_logits(logits):
     # pytorch sample from categorical distribution
@@ -52,12 +58,42 @@ class MDPEnv(gym.Env):
         """
         self.config = config
         self.seed(config["seed"])
-        self.action_space = gym.spaces.Discrete(len(config["action_space"]))
-        self.state_space = gym.spaces.Discrete(len(config["state_space"]))
+        self.action_space = gym.spaces.Discrete(config['action_dim'])
+        self.observation_space = gym.spaces.Discrete(config['state_dim'])
+        # self.state_space = gym.spaces.Discrete(config['state_dim'])
         self.initial_state_distribution = config["initial_state_distribution"]
-        self.state = sample_from_logits(config["initial_state_distribution"])
         self.transition_function = config["transition_function"]
         self.reward_function = config["reward_function"]
+
+        # self.H = config["training horizon H"]
+        # self.info = {}
+        # self.episode = 0
+        # self.total_reward = 0.
+
+
+
+    def reset(self, seed=None):
+        """
+        Reset the environment.
+
+        Returns
+        -------
+        observation : int
+            Initial observation
+        """
+        super().reset(seed=seed)
+        self.state = sample_from_logits(self.initial_state_distribution)
+        info = {}
+        
+        # self.info[self.episode] = {'r': self.total_reward,
+        #                           'l': self.H,
+        #                           't': 0.}
+        # self.total_reward = 0.
+        # info = {'total reward': self.total_reward}
+        # # print('total reward', self.total_reward)
+        # self.info = info
+        return self.state, info
+
 
     def step(self, action):
         """
@@ -80,23 +116,28 @@ class MDPEnv(gym.Env):
             Additional information
         """
         observation = sample_from_logits(self.transition_function[self.state][action])
-        reward = self.reward_function(self.state, action)
-        done = False
+        reward = self.reward_function[self.state, action].item()
+        terminated = False
+        truncated = False
+        # if self.H == 0:
+        #     terminated = True
+        #     self.episode += 1
+        #     self.info[self.episode] = {'r': self.total_reward,
+        #                                'l': self.H,
+        #                                't': 0.}
+        #     self.total_reward = 0.
+        # else:
+        #     self.H =- 1
+        
         info = {}
         self.state = observation
-        return observation, reward, done, info
-    
-    def reset(self):
-        """
-        Reset the environment.
+        # self.total_reward += reward
 
-        Returns
-        -------
-        observation : int
-            Initial observation
-        """
-        self.state = sample_from_logits(self.config["initial_state_distribution"])
-        return self.state
+        # if terminated:
+        #     info['total reward'] = self.total_reward
+        #     self.total_reward = 0.
+
+        return observation, reward, terminated, truncated, info
     
     def seed(self, seed=None):
         """
@@ -129,3 +170,22 @@ class MDPEnv(gym.Env):
 
     def __str__(self):
         return "MimicEnv"
+
+
+
+# check environment
+from stable_baselines3.common.env_checker import check_env
+MimicEnv = MDPEnv(config)
+
+# It will check your custom environment and output additional warnings if needed
+check_env(MimicEnv)
+
+
+from gym.envs.registration import register
+
+register(
+    id='gym_examples/MimicEnv-v0',
+    entry_point='MimicEnv',
+    max_episode_steps=200,
+    kwargs = {'config': config}
+)
