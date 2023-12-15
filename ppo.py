@@ -683,20 +683,20 @@ class PPO(OnPolicyAlgorithm):
         utils.save_json([observations, actions], f"data/dppo_run_rollouts_{self.n_epochs}.json")
 
 
-        data = pd.DataFrame({
-        'Updates': np.arange(len(losses)),
-        'Loss': losses
-    })
+    #     data = pd.DataFrame({
+    #     'Updates': np.arange(len(losses)),
+    #     'Loss': losses
+    # })
         
-        sns.lineplot(x='Updates', y='Loss', data=data)
+    #     sns.lineplot(x='Updates', y='Loss', data=data)
 
-        # Optional: Set the labels and title using Matplotlib functions
-        plt.xlabel('Updates')              # Label for x-axis
-        plt.ylabel('Loss')       # Label for y-axis
-        plt.title('Delayed PPO losses') # Title of the plot
+    #     # Optional: Set the labels and title using Matplotlib functions
+    #     plt.xlabel('Updates')              # Label for x-axis
+    #     plt.ylabel('Loss')       # Label for y-axis
+    #     plt.title('Delayed PPO losses') # Title of the plot
 
-        plt.savefig(f"data/ppo_losses_{self.n_epochs}_figure")
-        plt.show()   
+    #     plt.savefig(f"data/ppo_losses_{self.n_epochs}_figure")
+    #     plt.show()   
 
 
 
