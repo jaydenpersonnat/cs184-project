@@ -22,6 +22,8 @@ eta = (H^2 * int(states) * int(actions) * K + H^4 * (K + D)) ** (-(1/2))
 print('eta', eta)
 
 
+
+
 config = {
         # this is for both the environment and the agent
         # action space is list of actions, dimensions A * 1
@@ -37,10 +39,10 @@ config = {
         # reward function is S * A
         'reward_function': torch.from_numpy(reward),
 
-        'training horizon H': H,
-        'episodes K': K,
-        'eta': eta,
-        'gamma': 2 * eta * H     
+        'training horizon H': 1000,
+        'episodes K': 1000,
+        'eta': 0.01,
+        'gamma': 0.1        
 }
 
 
@@ -144,12 +146,15 @@ class DAPO:
         return occ_measure
 
     def run(self):
+
+        total_rewards = [] 
+
         for k in range(self.K):
 
             # DELAYS! #! HOW ARE WE TRACKING THE DELAYED TRAJECTORIES? 
             # put k in list in dictionary at some value >= k, < K
             #! RANDOMMMMMMMMMM
-            rdm_num = np.random.choice(np.arange(k, k+1))
+            rdm_num = np.random.choice(np.arange(k, k + 10))
             self.delay_dict[rdm_num].append(k)
             delayed = self.delay_dict[k]
 
@@ -158,7 +163,11 @@ class DAPO:
             k_trajectory = self.play_episode(self.policy_history[:,:,:,k])
             k_rewards = self.observe_feedback(k_trajectory)
 
-            print(f"Episode: {k}, Total Reward: {torch.sum(k_rewards)}")
+            reward_sum = torch.sum(k_rewards)
+
+            total_rewards.append(reward_sum)
+
+            print(f"Episode: {k}, Total Reward: {reward_sum}")
         
             Q = torch.zeros(self.S, self.A, self.H, len(delayed))
             B = torch.zeros(self.S, self.A, self.H + 1, len(delayed))
