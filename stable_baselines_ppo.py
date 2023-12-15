@@ -14,6 +14,7 @@ from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 import seaborn as sns 
 import matplotlib.pyplot as plt 
 import pandas as pd 
+import utils
 
 SelfPPO = TypeVar("SelfPPO", bound="PPO")
 
@@ -204,12 +205,15 @@ class PPO(OnPolicyAlgorithm):
 
         losses = [] 
 
+        all_rolloutbuffers_sofar = [] 
+
         continue_training = True
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
+                all_rolloutbuffers_sofar.append(rollout_data)
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
@@ -313,21 +317,31 @@ class PPO(OnPolicyAlgorithm):
 
         
         losses = np.array(losses)
-        np.savez(f"data/dppo_losses_{self.n_epochs}", losses=losses)
+
+
+        actions = [[int(action) for action in rollout.actions.numpy()] for rollout in all_rolloutbuffers_sofar]
+        observations = [[int(observation) for observation in rollout.observations.numpy()] for rollout in all_rolloutbuffers_sofar]
+
+
+        np.savez(f"data/dppo_losses_{self.n_epochs}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
+
+        utils.save_json([observations, actions], f"data/dppo_run_rollouts_{self.n_epochs}.json")
+
 
         data = pd.DataFrame({
         'Updates': np.arange(len(losses)),
-        'Loss': losses})
+        'Loss': losses
+    })
         
         sns.lineplot(x='Updates', y='Loss', data=data)
 
         # Optional: Set the labels and title using Matplotlib functions
         plt.xlabel('Updates')              # Label for x-axis
         plt.ylabel('Loss')       # Label for y-axis
-        plt.title('PPO Losses') # Title of the plot
+        plt.title('Delayed PPO losses') # Title of the plot
 
-        plt.savefig(f"data/dppo_losses_{self.n_epochs}_figure")
-        plt.show()   
+        plt.savefig(f"data/ppo_losses_{self.n_epochs}_figure")
+        plt.show()    
 
 
     def learn(

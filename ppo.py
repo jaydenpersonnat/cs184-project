@@ -538,7 +538,6 @@ class PPO(OnPolicyAlgorithm):
         for epoch in range(self.n_epochs): 
             rdm_num = np.random.choice(np.arange(epoch, min(self.n_epochs, epoch + 10)))
             delay_dict[rdm_num].append(epoch)  
-        print(delay_dict)
         
         all_rolloutbuffers_sofar = []
 
@@ -554,8 +553,8 @@ class PPO(OnPolicyAlgorithm):
             # Do a complete pass on the rollout buffer
             
             total_rollouts = 0 
+
             for i, rollout_data in enumerate(self.rollout_buffer.get(self.batch_size)):
-                actions = rollout_data.actions
                 # print("rollout_data", rollout_data.size)
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
@@ -672,29 +671,16 @@ class PPO(OnPolicyAlgorithm):
                     break
             
 
-
-        # explained_var = explained_variance(self.rollout_buffer.values.flatten(), self.rollout_buffer.returns.flatten())
-
-        # # Logs
-        # self.logger.record("train/entropy_loss", np.mean(entropy_losses))
-        # self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
-        # self.logger.record("train/value_loss", np.mean(value_losses))
-        # self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
-        # self.logger.record("train/clip_fraction", np.mean(clip_fractions))
-        # self.logger.record("train/loss", loss.item())
-        # self.logger.record("train/explained_variance", explained_var)
-        # if hasattr(self.policy, "log_std"):
-        #     self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
-
-        # self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
-        # self.logger.record("train/clip_range", clip_range)
-        # if self.clip_range_vf is not None:
-        #     self.logger.record("train/clip_range_vf", clip_range_vf)
-
         losses = np.array(losses)
 
-        np.savez(f"data/ppo_losses_{self.n_epochs}", losses=losses)
-        # np.savez(all_rolloutbuffers_sofar, f"data/rollouts_{self.n_epochs}.json")
+
+        actions = [[int(action) for action in rollout.actions.numpy()] for rollout in all_rolloutbuffers_sofar]
+        observations = [[int(observation) for observation in rollout.observations.numpy()] for rollout in all_rolloutbuffers_sofar]
+
+        
+        np.savez(f"data/dppo_losses_{self.n_epochs}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
+
+        utils.save_json([observations, actions], f"data/dppo_run_rollouts_{self.n_epochs}.json")
 
 
         data = pd.DataFrame({
@@ -739,5 +725,5 @@ from stable_baselines3.common.monitor import Monitor
 
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=False)
-model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=100)
+model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=10)
 model.learn(total_timesteps=1)
