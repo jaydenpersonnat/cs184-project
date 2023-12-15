@@ -531,12 +531,14 @@ class PPO(OnPolicyAlgorithm):
         continue_training = True
         # train for n_epochs epochs
 
+        delay_max = 10 
+
         delay_dict = {}
         for epoch in range(self.n_epochs):
             delay_dict[epoch] = []
 
         for epoch in range(self.n_epochs): 
-            rdm_num = np.random.choice(np.arange(epoch, min(self.n_epochs, epoch + 10)))
+            rdm_num = np.random.choice(np.arange(epoch, min(self.n_epochs, epoch + delay_max)))
             delay_dict[rdm_num].append(epoch)  
         
         all_rolloutbuffers_sofar = []
@@ -678,9 +680,9 @@ class PPO(OnPolicyAlgorithm):
         observations = [[int(observation[0]) for observation in rollout.observations.numpy()] for rollout in all_rolloutbuffers_sofar]
 
         
-        np.savez(f"data/trials/losses/dppo_losses_{self.n_epochs}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
+        np.savez(f"data/trials/losses/dppo_losses_epochs_{self.n_epochs}_delay_{delay_max}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
 
-        utils.save_json([observations, actions], f"data/trials/rollouts/dppo_run_rollouts_{self.n_epochs}.json")
+        utils.save_json([observations, actions], f"data/trials/rollouts/dppo_run_rolloutss_{self.n_epochs}_delay_{delay_max}.json")
 
 
 

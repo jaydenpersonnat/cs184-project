@@ -348,5 +348,5 @@ from stable_baselines3.common.monitor import Monitor
 
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=False)
-model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", n_epochs=10, batch_size = 32)
+model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", n_epochs=1000, batch_size = 100)
 model.learn(total_timesteps=1)
