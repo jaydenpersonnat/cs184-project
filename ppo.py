@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 import pandas as pd 
 import seaborn as sns 
 import matplotlib.pyplot as plt 
+import utils 
 
 th.autograd.set_detect_anomaly(True)
 
@@ -542,14 +543,17 @@ class PPO(OnPolicyAlgorithm):
         all_rolloutbuffers_sofar = []
 
         losses = [] 
-        epoch_losses = [] 
+        epoch_losses = {}
+
+        for epoch in range(self.n_epochs): 
+            epoch_losses[epoch] = []
         
-        current_loss = None 
 
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
             
+            total_rollouts = 0 
             for i, rollout_data in enumerate(self.rollout_buffer.get(self.batch_size)):
                 actions = rollout_data.actions
                 # print("rollout_data", rollout_data.size)
@@ -572,10 +576,12 @@ class PPO(OnPolicyAlgorithm):
                 # for rollout_data in delayed: 
                 # (1) we need to access the appropriate RolloutBufferSamples according to delays
                 all_rolloutbuffers_sofar.append(rollout_data)
+
+            total_rollouts = i + 1
             
             for k in delay_dict[epoch]: 
-                for i in range(self.batch_size):
-                    rollout_data = all_rolloutbuffers_sofar[self.batch_size * epoch + i]
+                for i in range(total_rollouts):
+                    rollout_data = all_rolloutbuffers_sofar[total_rollouts * k + i]
                     actions = rollout_data.actions
                     if isinstance(self.action_space, spaces.Discrete):
                         # Convert discrete action from float to long
@@ -594,7 +600,7 @@ class PPO(OnPolicyAlgorithm):
                         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
                     #! DELAY
-                    delay_rollout = all_rolloutbuffers_sofar[self.batch_size * k + i]
+                    delay_rollout = all_rolloutbuffers_sofar[total_rollouts * k + i]
 
                     # ratio between old and new policy, should be one at the first iteration
                     ratio = th.exp(log_prob - delay_rollout.old_log_prob)
@@ -651,6 +657,8 @@ class PPO(OnPolicyAlgorithm):
                     
                     print(f"Loss: {loss.item()}, Epoch: {epoch}, Delay: {k}")
                     losses.append(loss.item())
+                    
+                    epoch_losses[epoch].append(losses)
 
                     # Optimization step
                     self.policy.optimizer.zero_grad()
@@ -685,6 +693,10 @@ class PPO(OnPolicyAlgorithm):
 
         losses = np.array(losses)
 
+        np.savez(f"data/ppo_losses_{self.n_epochs}", losses=losses)
+        # np.savez(all_rolloutbuffers_sofar, f"data/rollouts_{self.n_epochs}.json")
+
+
         data = pd.DataFrame({
         'Updates': np.arange(len(losses)),
         'Loss': losses
@@ -695,8 +707,9 @@ class PPO(OnPolicyAlgorithm):
         # Optional: Set the labels and title using Matplotlib functions
         plt.xlabel('Updates')              # Label for x-axis
         plt.ylabel('Loss')       # Label for y-axis
-        plt.title('') # Title of the plot
+        plt.title('Delayed PPO losses') # Title of the plot
 
+        plt.savefig(f"data/ppo_losses_{self.n_epochs}_figure")
         plt.show()   
 
 
@@ -726,5 +739,5 @@ from stable_baselines3.common.monitor import Monitor
 
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=False)
-model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 32, n_epochs=10000)
+model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=100)
 model.learn(total_timesteps=1)

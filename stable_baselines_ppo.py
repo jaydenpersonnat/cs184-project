@@ -310,8 +310,10 @@ class PPO(OnPolicyAlgorithm):
         # self.logger.record("train/clip_range", clip_range)
         # if self.clip_range_vf is not None:
         #     self.logger.record("train/clip_range_vf", clip_range_vf)
-            
+
+        
         losses = np.array(losses)
+        np.savez(f"data/dppo_losses_{self.n_epochs}", losses=losses)
 
         data = pd.DataFrame({
         'Updates': np.arange(len(losses)),
@@ -322,8 +324,9 @@ class PPO(OnPolicyAlgorithm):
         # Optional: Set the labels and title using Matplotlib functions
         plt.xlabel('Updates')              # Label for x-axis
         plt.ylabel('Loss')       # Label for y-axis
-        plt.title('') # Title of the plot
+        plt.title('PPO Losses') # Title of the plot
 
+        plt.savefig(f"data/dppo_losses_{self.n_epochs}_figure")
         plt.show()   
 
 
