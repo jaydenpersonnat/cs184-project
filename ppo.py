@@ -531,7 +531,7 @@ class PPO(OnPolicyAlgorithm):
         continue_training = True
         # train for n_epochs epochs
 
-        delay_max = 10 
+        delay_max = 10
 
         delay_dict = {}
         for epoch in range(self.n_epochs):
@@ -711,5 +711,5 @@ from stable_baselines3.common.monitor import Monitor
 
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=False)
-model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=10)
+model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=1000)
 model.learn(total_timesteps=1)
