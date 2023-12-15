@@ -6,7 +6,7 @@ policy computations for GridWorld.
 import numpy as np
 
 
-def value_iteration(p, reward, discount, eps=1e-3):
+def value_iteration(p, reward, discount, mu, H=1000, eps=1e-3):
     """
     Basic value-iteration algorithm to solve the given MDP.
 
@@ -25,6 +25,7 @@ def value_iteration(p, reward, discount, eps=1e-3):
     Returns:
         The value function as table `[state: Integer] -> value: Float`.
     """
+    print(mu)
     n_states, _, n_actions = p.shape
     v = np.zeros(n_states)
 
@@ -37,6 +38,8 @@ def value_iteration(p, reward, discount, eps=1e-3):
     p = [np.matrix(p[:, :, a]) for a in range(n_actions)]
 
     delta = np.inf
+
+    epoch = 0 
     while delta > eps:      # iterate until convergence
         v_old = v
 
@@ -46,8 +49,29 @@ def value_iteration(p, reward, discount, eps=1e-3):
         # compute state values
         v = reward + np.max(q, axis=0)[0]
 
+        # soft_pi = (np.exp(q)/ np.sum(np.exp(q), axis = 0)).T
+
+        # state = np.random.choice(a=len(mu), p=mu)
+        # total_reward = 0
+
+        # # rollout trajectory
+        # for _ in range(H): 
+        #     action = np.random.choice(a=len(soft_pi[state]), p = soft_pi[state])
+
+        #     transition_probabilities = p[state, :, action]
+        #     # move on to next state 
+        #     state = np.random.choice(a=len(transition_probabilities), p=transition_probabilities)
+
+        #     # add reward for that state
+        #     total_reward += reward[state]
+
+
         # compute maximum delta
         delta = np.max(np.abs(v_old - v))
+
+        epoch += 1 
+
+        # print(f"Episode: {epoch}, Total Reward: {total_reward}")
 
     return v, q
 
