@@ -263,6 +263,7 @@ class PPO(OnPolicyAlgorithm):
 
                 losses.append(loss.item())
 
+                print(f"Loss: {loss}, epoch: {epoch}")
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
