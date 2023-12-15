@@ -531,7 +531,7 @@ class PPO(OnPolicyAlgorithm):
         continue_training = True
         # train for n_epochs epochs
 
-        delay_max = 10
+        delay_max = 500
 
         delay_dict = {}
         for epoch in range(self.n_epochs):
