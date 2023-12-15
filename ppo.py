@@ -567,14 +567,17 @@ class PPO(OnPolicyAlgorithm):
                 # for rollout_data in delayed: 
                 # (1) we need to access the appropriate RolloutBufferSamples according to delays
                 all_rolloutbuffers_sofar.append(rollout_data)
-                
-                for k in delay_dict[epoch]: 
-                    # print("k, epoch", k, epoch)
-                    # ! AOIHFOIAHVOIQHW
-                    print("Length_cum_lst, k, i, epoch, batch size", len(all_rolloutbuffers_sofar), k, i, epoch, self.batch_size) 
-                    print("calculation", self.batch_size * k + i)
+            
+            for k in delay_dict[epoch]: 
+                # print("k, epoch", k, epoch)
+                # ! AOIHFOIAHVOIQHW
+                # print("Length_cum_lst, k, i, epoch, batch size", len(all_rolloutbuffers_sofar), k, i, epoch, self.batch_size) 
+                # print("calculation", self.batch_size * k + i)
+                for i in range(self.batch_size):
+                    rollout_data = all_rolloutbuffers_sofar[self.batch_size * epoch + i]
+                    # print(k, i)
                     delay_rollout = all_rolloutbuffers_sofar[self.batch_size * k + i]
-
+                    advantages = all_rolloutbuffers_sofar[self.batch_size * epoch + i].advantages
                     # print(all_rolloutbuffers_sofar)
                     # print(delay_dict)
                     
@@ -617,7 +620,7 @@ class PPO(OnPolicyAlgorithm):
                     entropy_losses.append(entropy_loss.item())
 
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
-
+                    print(loss)
                     # Calculate approximate form of reverse KL Divergence for early stopping
                     # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                     # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
@@ -635,8 +638,9 @@ class PPO(OnPolicyAlgorithm):
                     
                     # Optimization step
                     self.policy.optimizer.zero_grad()
-                    loss = loss.clone()
-                    loss.backward(retain_graph=True)
+                    # loss = loss.clone()
+                    loss.backward() #retain_graph=True
+                    print(loss)
                     # Clip grad norm
                     th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                     self.policy.optimizer.step()
@@ -645,7 +649,7 @@ class PPO(OnPolicyAlgorithm):
                     if not continue_training:
                         break
 
-                    # print(len(all_rolloutbuffers_sofar))   
+                # print(len(all_rolloutbuffers_sofar))   
         
         # all_rolloutbuffers_sofar = []
 
