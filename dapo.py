@@ -4,37 +4,29 @@ from torch import distributions as pyd
 import numpy as np
 # import environment as env_setup
 
-# MimicEnv = env_setup.MDPEnv(env_setup.config_env)
 
 # write a 6x6 tensor with half zeros and half ones randomly
 mdp_params = np.load("mdp/mdp_25.npz")
 
-reward = mdp_params['reward']
+reward = np.max(mdp_params['reward']) - mdp_params['reward']
 mu = mdp_params['mu']
-p_transition = mdp_params['p_transition']
+p_transition = mdp_params['p_transition'] # S * S' * A
 states = mdp_params['states']
 actions = mdp_params['n_actions']
-H = 1000
-K = 10000
+H = 100
+K = 10
 D = 50
 
-eta = (H^2 * int(states) * int(actions) * K + H^4 * (K + D)) ** (-(1/2))
+# eta = (H^2 * int(states) * int(actions) * K + H^4 * (K + D)) ** (-(1/2))
+eta = 0.5
 print('eta', eta)
 
 
 config = {
-        # this is for both the environment and the agent
-        # action space is list of actions, dimensions A * 1
         'action_dim': int(actions),
-        # state space is list of states, dimensions S * 1
         'state_dim': int(states),
-        # transition probabilities are a tensor of probabilities, dimensions S * S * A
-        # 'transition_function': torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
         'transition_function': torch.from_numpy(p_transition),
-
-        # initial state distribution is logits
         'initial_state_distribution': torch.from_numpy(mu),
-        # reward function is S * A
         'reward_function': torch.from_numpy(reward),
 
         'training horizon H': H,
@@ -46,10 +38,6 @@ config = {
 
 class DAPO:
     def __init__(self, config): 
-        # Initialize the environment
-        # self.env = env
-        # self.action_space = config['action_space']
-        # self.state_space = config['state_space']
         self.transition_function = config['transition_function']
         self.initial_state_distribution = config['initial_state_distribution']
         self.H = config["training horizon H"]
@@ -60,33 +48,28 @@ class DAPO:
         self.eta = config["eta"]
         self.gamma = config["gamma"]
 
-        # initialize state and time step
-        # self.state = sample_from_logits(self.initial_state_distribution)
-
         # initialize space dimensions
-        self.A = config['action_dim'] # self.action_space.shape[0]
-        self.S = config['state_dim'] # self.state_space.shape[0]
+        self.A = config['action_dim']
+        self.S = config['state_dim']
 
-        # initialize policy, occupancy measures, and visit counters
         # self.policy_history = torch.zeros(self.S, self.A, self.H, self.K)
         self.policy_history = (1.0 / self.A) * torch.ones(self.S, self.A, self.H, self.K)
-        # print('policy_history shape', self.policy_history.shape)
 
         self.delay_dict = {}
         for i in range(self.K): self.delay_dict[i] = []
 
     def sample_from_logits(self, logits):
-        # pytorch sample from categorical distribution
         sample = pyd.Categorical(logits=logits).sample()
         return sample.item()
 
-    def play_one_step(self, current_state, policy, h):
-        # Play one step in the environment and return the next state, reward, and done flag
-        # print('policy at k', policy)
-        # print('action distribution at k', policy[current_state, :, h])
-
+    def play_one_step(self, current_state, policy, h):  
+        # Play one step in the environment
+        
+        # sample from policy at timestep h
         action = self.sample_from_logits(policy[current_state, :, h])
-        next_state = self.sample_from_logits(self.transition_function[current_state][action])
+        # sample from transition to get next state
+        next_state = self.sample_from_logits(self.transition_function[:, current_state, action])
+        # get reward for state and action
         reward = self.reward_function[current_state, action]
         return action, next_state, reward
 
@@ -94,6 +77,8 @@ class DAPO:
         traj = []
         # sample initial state
         current_state = self.sample_from_logits(self.initial_state_distribution)
+        
+        # for 0, ..., H-1 play a step and set the current state to the next state
         for h in range(self.H):
             action, next_state, reward = self.play_one_step(current_state, policy, h)
             traj.append((current_state, action, reward))
