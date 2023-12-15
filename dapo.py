@@ -86,7 +86,7 @@ class DAPO:
         # print('action distribution at k', policy[current_state, :, h])
 
         action = self.sample_from_logits(policy[current_state, :, h])
-        next_state = self.sample_from_logits(self.transition_function[current_state][action])
+        next_state = self.sample_from_logits(self.transition_function[current_state, :, action])
         reward = self.reward_function[current_state, action]
         return action, next_state, reward
 
@@ -207,7 +207,7 @@ class DAPO:
                             summation = 0
                             for s_prime in range(self.S):
                                 for a_prime in range(self.A): 
-                                    term = self.transition_function[s][a][s_prime] \
+                                    term = self.transition_function[s][s_prime][a] \
                                         * self.policy_history[s_prime, a_prime, h+1, j][s_prime][a_prime] \
                                         * B[s_prime][a_prime][h+1][j]
                                     summation += term 
