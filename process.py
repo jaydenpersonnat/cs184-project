@@ -159,6 +159,8 @@ if __name__ == "__main__":
     p_events, p_vitals = intersect_vitals_events(patient_events, patient_vitals)
     trajectories = construct_trajectories(p_events, p_vitals)
 
+    trajectories = {key: value for key, value in trajectories.items() if len(value) > 50 }
+
     save_json(trajectories, f"data/trajectories_{states}.json")
 
     T = convert_traj(trajectories)
