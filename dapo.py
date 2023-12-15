@@ -22,6 +22,8 @@ eta = 0.5
 print('eta', eta)
 
 
+
+
 config = {
         'action_dim': int(actions),
         'state_dim': int(states),
@@ -29,10 +31,10 @@ config = {
         'initial_state_distribution': torch.from_numpy(mu),
         'reward_function': torch.from_numpy(reward),
 
-        'training horizon H': H,
-        'episodes K': K,
-        'eta': eta,
-        'gamma': 2 * eta * H     
+        'training horizon H': 1000,
+        'episodes K': 1000,
+        'eta': 0.01,
+        'gamma': 0.1        
 }
 
 
@@ -67,9 +69,7 @@ class DAPO:
         
         # sample from policy at timestep h
         action = self.sample_from_logits(policy[current_state, :, h])
-        # sample from transition to get next state
-        next_state = self.sample_from_logits(self.transition_function[:, current_state, action])
-        # get reward for state and action
+        next_state = self.sample_from_logits(self.transition_function[current_state, :, action])
         reward = self.reward_function[current_state, action]
         return action, next_state, reward
 
@@ -129,12 +129,15 @@ class DAPO:
         return occ_measure
 
     def run(self):
+
+        total_rewards = [] 
+
         for k in range(self.K):
 
             # DELAYS! #! HOW ARE WE TRACKING THE DELAYED TRAJECTORIES? 
             # put k in list in dictionary at some value >= k, < K
             #! RANDOMMMMMMMMMM
-            rdm_num = np.random.choice(np.arange(k, k+1))
+            rdm_num = np.random.choice(np.arange(k, k + 10))
             self.delay_dict[rdm_num].append(k)
             delayed = self.delay_dict[k]
 
@@ -143,7 +146,11 @@ class DAPO:
             k_trajectory = self.play_episode(self.policy_history[:,:,:,k])
             k_rewards = self.observe_feedback(k_trajectory)
 
-            print(f"Episode: {k}, Total Reward: {torch.sum(k_rewards)}")
+            reward_sum = torch.sum(k_rewards)
+
+            total_rewards.append(reward_sum)
+
+            print(f"Episode: {k}, Total Reward: {reward_sum}")
         
             Q = torch.zeros(self.S, self.A, self.H, len(delayed))
             B = torch.zeros(self.S, self.A, self.H + 1, len(delayed))
@@ -192,7 +199,7 @@ class DAPO:
                             summation = 0
                             for s_prime in range(self.S):
                                 for a_prime in range(self.A): 
-                                    term = self.transition_function[s][a][s_prime] \
+                                    term = self.transition_function[s][s_prime][a] \
                                         * self.policy_history[s_prime, a_prime, h+1, j][s_prime][a_prime] \
                                         * B[s_prime][a_prime][h+1][j]
                                     summation += term 
