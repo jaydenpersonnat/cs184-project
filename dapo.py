@@ -1,11 +1,7 @@
 import torch
-# import torch.optim as optim
 from torch import distributions as pyd
 import numpy as np
-# import environment as env_setup
 
-
-# write a 6x6 tensor with half zeros and half ones randomly
 mdp_params = np.load("mdp/mdp_25.npz")
 
 reward = np.max(mdp_params['reward']) - mdp_params['reward']
@@ -17,12 +13,9 @@ H = 100
 K = 10
 D = 50
 
-# eta = (H^2 * int(states) * int(actions) * K + H^4 * (K + D)) ** (-(1/2))
-eta = 0.5
-print('eta', eta)
-
-
-
+eta = (H^2 * int(states) * int(actions) * K + H^4 * (K + D)) ** (-(1/2))
+# eta = 0.5
+# print('eta', eta)
 
 config = {
         'action_dim': int(actions),
@@ -85,7 +78,7 @@ class DAPO:
             current_state = next_state
         return traj
     
-    def observe_feedback(self, traj): # observe \{c^j_h(s^j_h,a^j_h)\}^{H}_{h=1}
+    def observe_feedback(self, traj):
         rewards = torch.zeros(self.H)
         for h in range(self.H - 1):
             s, a = traj[h][0], traj[h][1]
@@ -134,15 +127,11 @@ class DAPO:
 
         for k in range(self.K):
 
-            # DELAYS! #! HOW ARE WE TRACKING THE DELAYED TRAJECTORIES? 
-            # put k in list in dictionary at some value >= k, < K
-            #! RANDOMMMMMMMMMM
             rdm_num = np.random.choice(np.arange(k, k + 10))
             self.delay_dict[rdm_num].append(k)
             delayed = self.delay_dict[k]
 
             # Play episode k with policy $\pi_k$ and observe trajectory
-            # print('policy at k', self.policy_history[:,:,:,k])
             k_trajectory = self.play_episode(self.policy_history[:,:,:,k])
             k_rewards = self.observe_feedback(k_trajectory)
 
@@ -155,11 +144,7 @@ class DAPO:
             Q = torch.zeros(self.S, self.A, self.H, len(delayed))
             B = torch.zeros(self.S, self.A, self.H + 1, len(delayed))
 
-            # numerator_sum = 0
-
-            #! A DICTIONARY 
             for j in delayed: 
-                #? lol idk 
                 # get trajectory corresponding to delayed trajectory
                 trajectory = self.play_episode(self.policy_history[:,:,:,j])
                 rewards = self.observe_feedback(trajectory)
