@@ -359,7 +359,7 @@ model.learn(total_timesteps=1)
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=True)
 model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=1000)
-model.learn(total_timesteps=10)
+model.learn(total_timesteps=1)
 obs = MimicEnv.reset()
 # print(obs)
 
