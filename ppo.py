@@ -715,20 +715,6 @@ import sys
 import environment
 from environment import MDPEnv
 from stable_baselines3.common.monitor import Monitor
-# import gymnasium as gym 
-# from gym import spaces 
-# from stable_baselines3.common import policies
-
-# obs_space = spaces.Dict({"a": spaces.Discrete(2,), "b": spaces.Box(0,1,(2,))})
-# policy = policies.MultiInputActorCriticPolicy(
-#     obs_space,
-#     spaces.Discrete(4,),
-#     lambda _: 0.001,
-# )
-# obs = obs_space.sample()
-# print(policy.obs_to_tensor(obs))
-
-# sys.exit()
 
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=True)
@@ -742,24 +728,6 @@ obs = MimicEnv.reset()
 import numpy as np
 from stable_baselines3.common.policies import obs_as_tensor
 
-# obs = obs_as_tensor(1., model.policy.device) 
-# print(model.policy) # ActorCriticPolicy
-# TensorDict = Dict[str, th.Tensor]
-# PyTorchObs = Union[th.Tensor, TensorDict]
-
-# def obs_to_tensor(self, observation: Union[np.ndarray, Dict[str, np.ndarray]]) -> Tuple[PyTorchObs, bool]:
-#         """
-#         Convert an input observation to a PyTorch tensor that can be fed to a model.
-#         Includes sugar-coating to handle different observations (e.g. normalizing images).
-
-#         :param observation: the input observation
-#         :return: The observation as PyTorch tensor
-#             and whether the observation is vectorized or not
-#         """
-# import torch 
-# print(torch.as_tensor(8))
-# print(model.policy.obs_to_tensor((np.asarray([7]), {''})))
-# print(obs_as_tensor(np.asarray([6]), model.policy.device))
 
 def predict_proba(model, state):
     obs = obs_as_tensor(state, model.policy.device)
