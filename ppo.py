@@ -710,19 +710,73 @@ class PPO(OnPolicyAlgorithm):
             reset_num_timesteps=reset_num_timesteps,
             progress_bar=progress_bar,
         )
-    
 
+import sys
 import environment
 from environment import MDPEnv
 from stable_baselines3.common.monitor import Monitor
+# import gymnasium as gym 
+# from gym import spaces 
+# from stable_baselines3.common import policies
+
+# obs_space = spaces.Dict({"a": spaces.Discrete(2,), "b": spaces.Box(0,1,(2,))})
+# policy = policies.MultiInputActorCriticPolicy(
+#     obs_space,
+#     spaces.Discrete(4,),
+#     lambda _: 0.001,
+# )
+# obs = obs_space.sample()
+# print(policy.obs_to_tensor(obs))
+
+# sys.exit()
 
 MimicEnv = MDPEnv(environment.config)
 MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=True)
-model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=10)
-model.learn(total_timesteps=1)
+model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=1000)
+model.learn(total_timesteps=10000)
+obs = MimicEnv.reset()
+# print(obs)
 
+# mean_reward, std_reward = evaluate_policy(model, MimicEnv, n_eval_episodes=1, deterministic=True)
 
-mean_reward, std_reward = evaluate_policy(model, MimicEnv, n_eval_episodes=1, deterministic=True)
+import numpy as np
+from stable_baselines3.common.policies import obs_as_tensor
 
+# obs = obs_as_tensor(1., model.policy.device) 
+# print(model.policy) # ActorCriticPolicy
+# TensorDict = Dict[str, th.Tensor]
+# PyTorchObs = Union[th.Tensor, TensorDict]
 
-print(f"Mean Reward: {mean_reward}")
+# def obs_to_tensor(self, observation: Union[np.ndarray, Dict[str, np.ndarray]]) -> Tuple[PyTorchObs, bool]:
+#         """
+#         Convert an input observation to a PyTorch tensor that can be fed to a model.
+#         Includes sugar-coating to handle different observations (e.g. normalizing images).
+
+#         :param observation: the input observation
+#         :return: The observation as PyTorch tensor
+#             and whether the observation is vectorized or not
+#         """
+# import torch 
+# print(torch.as_tensor(8))
+# print(model.policy.obs_to_tensor((np.asarray([7]), {''})))
+# print(obs_as_tensor(np.asarray([6]), model.policy.device))
+
+def predict_proba(model, state):
+    obs = obs_as_tensor(state, model.policy.device)
+    dis = model.policy.get_distribution(obs)
+    probs = dis.distribution.probs
+    probs_np = probs.detach().numpy()
+    return probs_np
+# prob = predict_proba(model, np.asarray([12, 13]))
+prob = predict_proba(model, np.arange(0,25))
+
+sns.heatmap(prob,  annot=True, cmap="viridis", cbar=True)
+# plt.imshow(prob)
+
+plt.xlabel('Actions')
+plt.ylabel('States')
+plt.title('Policy Heatmap')
+plt.savefig('policy_heatmap.png', dpi=400)
+
+plt.show()
+# print(f"Mean Reward: {mean_reward}")
