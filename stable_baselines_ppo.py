@@ -300,13 +300,16 @@ class PPO(OnPolicyAlgorithm):
         
         losses = np.array(losses)
 
-
+        
         actions = [[int(action[0]) for action in rollout.actions.numpy()] for rollout in all_rolloutbuffers_sofar]
         observations = [[int(observation[0]) for observation in rollout.observations.numpy()] for rollout in all_rolloutbuffers_sofar]
 
 
         np.savez(f"data/trials/losses/ppo_losses_{self.n_epochs}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
         utils.save_json([observations, actions], f"data/trials/rollouts/ppo_run_rollouts_{self.n_epochs}.json")
+
+        np.savez(f"data/trials/policies/ppo_policy_epochs_{self.n_epochs}", policy=self.policy.action_dist.distribution.probs.detach().numpy())
+
 
     #     data = pd.DataFrame({
     #     'Updates': np.arange(len(losses)),

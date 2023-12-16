@@ -10,9 +10,13 @@ from gymnasium import spaces
 from torch.nn import functional as F
 from abc import ABC, abstractmethod
 import pandas as pd 
+from stable_baselines3.common.evaluation import evaluate_policy
 import seaborn as sns 
 import matplotlib.pyplot as plt 
 import utils 
+from gym.spaces import Discrete
+
+from stable_baselines3.common.policies import obs_as_tensor
 
 th.autograd.set_detect_anomaly(True)
 
@@ -531,7 +535,7 @@ class PPO(OnPolicyAlgorithm):
         continue_training = True
         # train for n_epochs epochs
 
-        delay_max = 500
+        delay_max = 10
 
         delay_dict = {}
         for epoch in range(self.n_epochs):
@@ -567,6 +571,7 @@ class PPO(OnPolicyAlgorithm):
                     self.policy.reset_noise(self.batch_size)
 
                 values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
+                
                 values = values.flatten()
                 # Normalize advantage
                 advantages = rollout_data.advantages
@@ -579,7 +584,8 @@ class PPO(OnPolicyAlgorithm):
                 all_rolloutbuffers_sofar.append(rollout_data)
 
             total_rollouts = i + 1
-            
+
+
             for k in delay_dict[epoch]: 
                 for i in range(total_rollouts):
                     rollout_data = all_rolloutbuffers_sofar[total_rollouts * k + i]
@@ -670,8 +676,7 @@ class PPO(OnPolicyAlgorithm):
 
                 self._n_updates += 1
                 if not continue_training:
-                    break
-            
+                    break            
 
         losses = np.array(losses)
 
@@ -681,6 +686,8 @@ class PPO(OnPolicyAlgorithm):
 
         
         np.savez(f"data/trials/losses/dppo_losses_epochs_{self.n_epochs}_delay_{delay_max}", losses=losses, entropy_losses=np.array(entropy_losses), value_losses=np.array(value_losses))
+
+        np.savez(f"data/trials/policies/dppo_policy_epochs_{self.n_epochs}_delay_{delay_max}", policy=self.policy.action_dist.distribution.probs.detach().numpy())
 
         utils.save_json([observations, actions], f"data/trials/rollouts/dppo_run_rolloutss_{self.n_epochs}_delay_{delay_max}.json")
 
@@ -710,6 +717,12 @@ from environment import MDPEnv
 from stable_baselines3.common.monitor import Monitor
 
 MimicEnv = MDPEnv(environment.config)
-MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=False)
-model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=1000)
+MimicEnv = Monitor(MimicEnv, filename='ppo_rewards.csv', allow_early_resets=True)
+model = PPO("MlpPolicy", MimicEnv, verbose=1, tensorboard_log="", batch_size = 100,  n_epochs=10)
 model.learn(total_timesteps=1)
+
+
+mean_reward, std_reward = evaluate_policy(model, MimicEnv, n_eval_episodes=1, deterministic=True)
+
+
+print(f"Mean Reward: {mean_reward}")
